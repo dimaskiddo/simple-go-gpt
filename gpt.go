@@ -22,7 +22,8 @@ func ChatGPTResponse(question string) (response string, err error) {
 		gpt.CompletionRequest{
 			Prompt:      []string{question},
 			MaxTokens:   gpt.IntPtr(4000),
-			Temperature: gpt.Float32Ptr(0.9),
+			Temperature: gpt.Float32Ptr(1.0),
+			TopP:        gpt.Float32Ptr(0.9),
 		},
 	)
 
