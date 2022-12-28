@@ -32,7 +32,10 @@ func ChatGPTResponse(question string) (response string, err error) {
 
 	buffResponse := strings.TrimSpace(gptResponse.Choices[0].Text)
 	buffResponse = strings.TrimLeft(buffResponse, "?\n")
+	buffResponse = strings.TrimLeft(buffResponse, "!\n")
+	buffResponse = strings.TrimLeft(buffResponse, ":\n")
 	buffResponse = strings.TrimLeft(buffResponse, "'\n")
+	buffResponse = strings.TrimLeft(buffResponse, ".\n")
 	buffResponse = strings.TrimLeft(buffResponse, "\n")
 
 	return buffResponse, nil

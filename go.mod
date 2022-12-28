@@ -1,4 +1,4 @@
-module github.com/dimaskiddo/chatgpt
+module github.com/dimaskiddo/simple-go-gpt
 
 go 1.17
 
