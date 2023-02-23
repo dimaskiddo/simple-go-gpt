@@ -5,10 +5,10 @@ import (
 	"os"
 	"strings"
 
-	gpt "github.com/PullRequestInc/go-gpt3"
+	gpt "github.com/sashabaranov/go-gpt3"
 )
 
-var OpenAI gpt.Client
+var OpenAI *gpt.Client
 
 func init() {
 	gptAPIKey := os.Getenv("OPENAI_API_KEY")
@@ -16,17 +16,19 @@ func init() {
 }
 
 func GPTResponse(question string) (response string, err error) {
-	gptResponse, err := OpenAI.CompletionWithEngine(
+	gptRequest := gpt.CompletionRequest{
+		Model:            gpt.GPT3TextDavinci003,
+		MaxTokens:        4000,
+		Temperature:      0,
+		TopP:             1,
+		PresencePenalty:  0,
+		FrequencyPenalty: 0,
+		Prompt:           question,
+	}
+
+	gptResponse, err := OpenAI.CreateCompletion(
 		context.Background(),
-		"text-davinci-003",
-		gpt.CompletionRequest{
-			Prompt:           []string{question},
-			MaxTokens:        gpt.IntPtr(4000),
-			Temperature:      gpt.Float32Ptr(0.0),
-			TopP:             gpt.Float32Ptr(1.0),
-			PresencePenalty:  *gpt.Float32Ptr(0.0),
-			FrequencyPenalty: *gpt.Float32Ptr(0.0),
-		},
+		gptRequest,
 	)
 
 	if err != nil {
