@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -24,19 +26,23 @@ func main() {
 			fmt.Println("Failed to Get Input from Stdin")
 		}
 
+		quitCommand := regexp.MustCompile(strings.ToLower("close|exit|quit|end"))
+		if bool(quitCommand.MatchString(strings.ToLower(question))) {
+			os.Exit(0)
+		}
 		fmt.Println("")
+
 		fmt.Println("Answer:")
 
-		answer, err := GPTResponse(question)
+		err = GPTResponse(question)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Println(answer)
 
 		select {
 		case <-sig:
 			os.Exit(0)
-		case <-time.After(3 * time.Second):
+		case <-time.After(1 * time.Second):
 			fmt.Println("")
 		}
 	}
