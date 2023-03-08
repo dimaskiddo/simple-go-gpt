@@ -25,7 +25,7 @@ func GPT3Completion(question string) (err error) {
 		Temperature:      0,
 		TopP:             1,
 		PresencePenalty:  0,
-		FrequencyPenalty: 0,
+		FrequencyPenalty: 0.6,
 		Messages: []OpenAI.ChatCompletionMessage{
 			{
 				Role:    OpenAI.ChatMessageRoleUser,
@@ -44,6 +44,7 @@ func GPT3Completion(question string) (err error) {
 	}
 	defer gptResponse.Close()
 
+	isFirstWordFound := false
 	for {
 		gptResponseStream, err := gptResponse.Recv()
 		if errors.Is(err, io.EOF) {
@@ -51,7 +52,14 @@ func GPT3Completion(question string) (err error) {
 		}
 
 		if len(gptResponseStream.Choices) > 0 {
-			fmt.Printf("%v", strings.TrimLeft(gptResponseStream.Choices[0].Delta.Content, "\n"))
+			wordResponse := gptResponseStream.Choices[0].Delta.Content
+			if !isFirstWordFound && wordResponse != "\n" && len(strings.TrimSpace(wordResponse)) != 0 {
+				isFirstWordFound = true
+			}
+
+			if isFirstWordFound {
+				fmt.Printf("%v", wordResponse)
+			}
 		}
 	}
 
