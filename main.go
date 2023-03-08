@@ -26,15 +26,17 @@ func main() {
 			fmt.Println("Failed to Get Input from Stdin")
 		}
 
+		questionFirstWord := strings.SplitN(question, " ", 2)[0]
 		quitCommand := regexp.MustCompile(strings.ToLower("close|exit|quit|end"))
-		if bool(quitCommand.MatchString(strings.ToLower(question))) {
+
+		if bool(quitCommand.MatchString(strings.ToLower(questionFirstWord))) {
 			os.Exit(0)
 		}
-		fmt.Println("")
 
+		fmt.Println("")
 		fmt.Println("Answer:")
 
-		err = GPTResponse(question)
+		err = GPT3Completion(question)
 		if err != nil {
 			fmt.Println(err.Error())
 		}

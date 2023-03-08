@@ -8,28 +8,33 @@ import (
 	"os"
 	"strings"
 
-	gpt "github.com/sashabaranov/go-gpt3"
+	OpenAI "github.com/sashabaranov/go-openai"
 )
 
-var OpenAI *gpt.Client
+var GPT *OpenAI.Client
 
 func init() {
 	gptAPIKey := os.Getenv("OPENAI_API_KEY")
-	OpenAI = gpt.NewClient(gptAPIKey)
+	GPT = OpenAI.NewClient(gptAPIKey)
 }
 
-func GPTResponse(question string) (err error) {
-	gptRequest := gpt.CompletionRequest{
-		Model:            "text-davinci-003",
+func GPT3Completion(question string) (err error) {
+	gptRequest := OpenAI.ChatCompletionRequest{
+		Model:            "gpt-3.5-turbo",
 		MaxTokens:        4000,
 		Temperature:      0,
 		TopP:             1,
 		PresencePenalty:  0,
-		FrequencyPenalty: 0.6,
-		Prompt:           question,
+		FrequencyPenalty: 0,
+		Messages: []OpenAI.ChatCompletionMessage{
+			{
+				Role:    OpenAI.ChatMessageRoleUser,
+				Content: question,
+			},
+		},
 	}
 
-	gptResponse, err := OpenAI.CreateCompletionStream(
+	gptResponse, err := GPT.CreateChatCompletionStream(
 		context.Background(),
 		gptRequest,
 	)
@@ -39,7 +44,6 @@ func GPTResponse(question string) (err error) {
 	}
 	defer gptResponse.Close()
 
-	wordPosition := 0
 	for {
 		gptResponseStream, err := gptResponse.Recv()
 		if errors.Is(err, io.EOF) {
@@ -47,15 +51,10 @@ func GPTResponse(question string) (err error) {
 		}
 
 		if len(gptResponseStream.Choices) > 0 {
-			if wordPosition == 0 {
-				fmt.Printf("%v", strings.TrimLeft(gptResponseStream.Choices[0].Text, "\n"))
-			} else {
-				fmt.Printf("%v", gptResponseStream.Choices[0].Text)
-			}
-
-			wordPosition++
+			fmt.Printf("%v", strings.TrimLeft(gptResponseStream.Choices[0].Delta.Content, "\n"))
 		}
 	}
+
 	fmt.Println("")
 
 	return nil
