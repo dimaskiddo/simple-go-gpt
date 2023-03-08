@@ -11,11 +11,11 @@ import (
 	OpenAI "github.com/sashabaranov/go-openai"
 )
 
-var GPT *OpenAI.Client
+var OAIClient *OpenAI.Client
 
 func init() {
-	gptAPIKey := os.Getenv("OPENAI_API_KEY")
-	GPT = OpenAI.NewClient(gptAPIKey)
+	OAIAPIKey := os.Getenv("OPENAI_API_KEY")
+	OAIClient = OpenAI.NewClient(OAIAPIKey)
 }
 
 func GPT3Completion(question string) (err error) {
@@ -34,7 +34,7 @@ func GPT3Completion(question string) (err error) {
 		},
 	}
 
-	gptResponse, err := GPT.CreateChatCompletionStream(
+	gptResponse, err := OAIClient.CreateChatCompletionStream(
 		context.Background(),
 		gptRequest,
 	)
@@ -63,7 +63,11 @@ func GPT3Completion(question string) (err error) {
 		}
 	}
 
-	fmt.Println("")
+	if !isFirstWordFound {
+		fmt.Println("Sorry, can't response this question for this time. Please try again after a few moment. Thank you !")
+	} else {
+		fmt.Println("")
+	}
 
 	return nil
 }
