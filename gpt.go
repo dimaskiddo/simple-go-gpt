@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"os"
-	"strings"
 
 	OpenAI "github.com/sashabaranov/go-openai"
 )
@@ -34,7 +31,7 @@ func GPT3Completion(question string) (err error) {
 		},
 	}
 
-	gptResponse, err := OAIClient.CreateChatCompletionStream(
+	gptResponse, err := OAIClient.CreateChatCompletion(
 		context.Background(),
 		gptRequest,
 	)
@@ -42,31 +39,9 @@ func GPT3Completion(question string) (err error) {
 	if err != nil {
 		return err
 	}
-	defer gptResponse.Close()
 
-	isFirstWordFound := false
-	for {
-		gptResponseStream, err := gptResponse.Recv()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if len(gptResponseStream.Choices) > 0 {
-			wordResponse := gptResponseStream.Choices[0].Delta.Content
-			if !isFirstWordFound && wordResponse != "\n" && len(strings.TrimSpace(wordResponse)) != 0 {
-				isFirstWordFound = true
-			}
-
-			if isFirstWordFound {
-				fmt.Printf("%v", wordResponse)
-			}
-		}
-	}
-
-	if !isFirstWordFound {
-		fmt.Println("Sorry, the AI can not response for this time. Please try again after a few moment. Thank you !")
-	} else {
-		fmt.Println("")
+	if len(gptResponse.Choices) > 0 {
+		fmt.Println(gptResponse.Choices[0].Message.Content)
 	}
 
 	return nil
