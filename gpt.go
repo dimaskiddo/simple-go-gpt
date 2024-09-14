@@ -102,14 +102,14 @@ func GPT3Completion(question string) (err error) {
 		*isStream = false
 
 		OGPTRequest := &Ollama.ChatRequest{
-			Stream: isStream,
-			Model:  "dadang",
+			Model: "dadang",
 			Messages: []Ollama.Message{
 				{
 					Role:    "user",
 					Content: question,
 				},
 			},
+			Stream: isStream,
 		}
 
 		OGTPResponseFunc := func(OGPTResponse Ollama.ChatResponse) error {
