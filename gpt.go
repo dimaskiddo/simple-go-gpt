@@ -78,6 +78,7 @@ func GPT3Completion(question string) (err error) {
 					Content: question,
 				},
 			},
+			Stream: false,
 		}
 
 		OAIGPTResponse, err := OAIClient.CreateChatCompletion(
@@ -90,7 +91,16 @@ func GPT3Completion(question string) (err error) {
 		}
 
 		if len(OAIGPTResponse.Choices) > 0 {
-			fmt.Println(OAIGPTResponse.Choices[0].Message.Content)
+			OAIGPTResponseBuffer := strings.TrimSpace(OAIGPTResponse.Choices[0].Message.Content)
+
+			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "?\n")
+			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "!\n")
+			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, ":\n")
+			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "'\n")
+			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, ".\n")
+			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "\n")
+
+			fmt.Println(OAIGPTResponseBuffer)
 		}
 
 		return nil
@@ -112,15 +122,15 @@ func GPT3Completion(question string) (err error) {
 			Stream: isStream,
 		}
 
-		OGTPResponseFunc := func(OGPTResponse Ollama.ChatResponse) error {
-			OGPTResponseText = OGPTResponse.Message.Content
+		OGTPResponse := func(OGPTResponseGen Ollama.ChatResponse) error {
+			OGPTResponseText = OGPTResponseGen.Message.Content
 			return nil
 		}
 
 		err := OClient.Chat(
 			context.Background(),
 			OGPTRequest,
-			OGTPResponseFunc,
+			OGTPResponse,
 		)
 
 		if err != nil {
@@ -128,7 +138,16 @@ func GPT3Completion(question string) (err error) {
 		}
 
 		if len(OGPTResponseText) > 0 {
-			fmt.Println(OGPTResponseText)
+			OGPTResponseBuffer := strings.TrimSpace(OGPTResponseText)
+
+			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "?\n")
+			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "!\n")
+			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, ":\n")
+			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "'\n")
+			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, ".\n")
+			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "\n")
+
+			fmt.Println(OGPTResponseBuffer)
 		}
 
 		return nil
