@@ -2,155 +2,88 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net"
-	"net/http"
-	"net/url"
+	"io"
 	"os"
+	"regexp"
 	"strings"
 
-	Ollama "github.com/ollama/ollama/api"
 	OpenAI "github.com/sashabaranov/go-openai"
 )
 
 var OAIClient *OpenAI.Client
-var OClient *Ollama.Client
-
-var GPTEngine string
 
 func init() {
-	GPTEngine = os.Getenv("GPT_ENGINE")
+	OAIAPIKey := os.Getenv("OPENAI_API_KEY")
 
-	switch strings.ToLower(GPTEngine) {
-	case "openai":
-		OAIAPIKey := os.Getenv("OPENAI_API_KEY")
-		OAIClient = OpenAI.NewClient(OAIAPIKey)
+	OAIConfig := OpenAI.DefaultConfig(OAIAPIKey)
+	OAIConfig.BaseURL = os.Getenv("OPENAI_API_URL")
 
-	default:
-		var OHostPort string
-
-		OHost := os.Getenv("OLLAMA_HOST")
-		OHostPath := os.Getenv("OLLAMA_HOST_PATH")
-
-		if len(OHostPath) <= 0 {
-			OHostPath = "/"
-		}
-
-		OHostSchema, OHostURL, isOK := strings.Cut(OHost, "://")
-
-		if !isOK {
-			OHostSchema = "http"
-			OHostURL = OHost
-			OHostPort = "11434"
-		}
-
-		if OHostPort == "" {
-			switch OHostSchema {
-			case "http":
-				OHostPort = "80"
-
-			case "https":
-				OHostPort = "443"
-			}
-		}
-
-		OClient = Ollama.NewClient(&url.URL{
-			Scheme: OHostSchema,
-			Host:   net.JoinHostPort(OHostURL, OHostPort),
-			Path:   OHostPath,
-		}, http.DefaultClient)
-	}
+	OAIClient = OpenAI.NewClientWithConfig(OAIConfig)
 }
 
 func GPT3Completion(question string) (err error) {
-	switch strings.ToLower(GPTEngine) {
-	case "openai":
-		OAIGPTRequest := OpenAI.ChatCompletionRequest{
-			Model:            "gpt-3.5-turbo",
-			MaxTokens:        4000,
-			Temperature:      0.0,
-			TopP:             1.0,
-			PresencePenalty:  0.0,
-			FrequencyPenalty: 0.6,
-			Messages: []OpenAI.ChatCompletionMessage{
-				{
-					Role:    OpenAI.ChatMessageRoleUser,
-					Content: question,
-				},
-			},
-			Stream: false,
-		}
+	isStream := new(bool)
+	*isStream = true
 
-		OAIGPTResponse, err := OAIClient.CreateChatCompletion(
-			context.Background(),
-			OAIGPTRequest,
-		)
+	var OAIGPTResponseText string
+
+	OAIGPTChatCompletion := []OpenAI.ChatCompletionMessage{
+		{
+			Role:    OpenAI.ChatMessageRoleUser,
+			Content: question,
+		},
+	}
+
+	OAIGPTPrompt := OpenAI.ChatCompletionRequest{
+		Model:            os.Getenv("OPENAI_MODEL_NAME"),
+		MaxTokens:        4096,
+		Temperature:      0.8,
+		TopP:             0.9,
+		PresencePenalty:  0.0,
+		FrequencyPenalty: 0.0,
+		Messages:         OAIGPTChatCompletion,
+		Stream:           *isStream,
+	}
+
+	OAIGPTStream, err := OAIClient.CreateChatCompletionStream(
+		context.Background(),
+		OAIGPTPrompt,
+	)
+
+	if err != nil {
+		return err
+	}
+	defer OAIGPTStream.Close()
+
+	for {
+		OAIGPTResponse, err := OAIGPTStream.Recv()
+		if errors.Is(err, io.EOF) {
+			break
+		}
 
 		if err != nil {
 			return err
 		}
 
 		if len(OAIGPTResponse.Choices) > 0 {
-			OAIGPTResponseBuffer := strings.TrimSpace(OAIGPTResponse.Choices[0].Message.Content)
-
-			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "?\n")
-			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "!\n")
-			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, ":\n")
-			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "'\n")
-			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, ".\n")
-			OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "\n")
-
-			fmt.Println(OAIGPTResponseBuffer)
+			OAIGPTResponseText = OAIGPTResponseText + OAIGPTResponse.Choices[0].Delta.Content
 		}
-
-		return nil
-
-	default:
-		var OGPTResponseText string
-
-		isStream := new(bool)
-		*isStream = false
-
-		OGPTRequest := &Ollama.ChatRequest{
-			Model: "dadang",
-			Messages: []Ollama.Message{
-				{
-					Role:    "user",
-					Content: question,
-				},
-			},
-			Stream: isStream,
-		}
-
-		OGTPResponse := func(OGPTResponseGen Ollama.ChatResponse) error {
-			OGPTResponseText = OGPTResponseGen.Message.Content
-			return nil
-		}
-
-		err := OClient.Chat(
-			context.Background(),
-			OGPTRequest,
-			OGTPResponse,
-		)
-
-		if err != nil {
-			return err
-		}
-
-		if len(OGPTResponseText) > 0 {
-			OGPTResponseBuffer := strings.TrimSpace(OGPTResponseText)
-
-			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "?\n")
-			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "!\n")
-			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, ":\n")
-			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "'\n")
-			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, ".\n")
-			OGPTResponseBuffer = strings.TrimLeft(OGPTResponseBuffer, "\n")
-
-			fmt.Println(OGPTResponseBuffer)
-		}
-
-		return nil
-
 	}
+
+	ThinkingResponseRegex := regexp.MustCompile("[\\s\\S]*<\\/think>\\n?")
+	CleanThinkingResponse := ThinkingResponseRegex.ReplaceAllString(OAIGPTResponseText, "")
+
+	OAIGPTResponseBuffer := strings.TrimSpace(CleanThinkingResponse)
+	OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "?\n")
+	OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "!\n")
+	OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, ":\n")
+	OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "'\n")
+	OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, ".\n")
+	OAIGPTResponseBuffer = strings.TrimLeft(OAIGPTResponseBuffer, "\n")
+
+	fmt.Println(OAIGPTResponseBuffer)
+
+	return nil
 }
